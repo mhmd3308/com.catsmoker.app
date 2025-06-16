@@ -1,79 +1,85 @@
-# Catsmoker App
+Package com.app.catsmoker;
 
-Catsmoker is a versatile Android app designed to unlock higher FPS in games by spoofing your device as a different model. For rooted devices, it leverages root access and LSPosed, while non-rooted devices can utilize Shizuku and SAF methods. Catsmoker also includes features such as a Crosshair overlay, with more enhancements planned for future releases.
+import android.annotation.SuppressLint;
+import android.os.Build;
+import android.util.Log;
 
-For more information, visit the [GitHub repository](https://github.com/Xposed-Modules-Repo/com.app.catsmoker).
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
-# Updated Pro Version
+import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-For the latest Pro version, check here: [Store](https://catsmoker.sell.app/product/catsmoker-app?store=catsmoker&quantity=1)
+@SuppressLint("DiscouragedPrivateApi")
+@SuppressWarnings("ConstantConditions")
+public class GameUnlocker implements IXposedHookLoadPackage {
 
-## Features
+    private static final String TAG = GameUnlocker.class.getSimpleName();
 
-- Spoof device information for improved gaming performance in supported games.
-- Compatible with a wide variety of popular gaming apps.
-- Simple installation with minimal configuration needed.
-- Displays a web page within the app.
+    // Map of packages to spoof with OnePlus 13 properties
+    private static final Map<String, Map<String, String>> packagesToSpoof = new HashMap<String, Map<String, String>>() {{
+        put("com.activision.callofduty.shooter", createOP13Props());
+        put("com.activision.callofduty.warzone", createOP13Props());
+        put("com.garena.game.codm", createOP13Props());
+        put("com.tencent.tmgp.kr.codm", createOP13Props());
+        put("com.vng.codmvn", createOP13Props());
+        put("com.tencent.tmgp.cod", createOP13Props());
+        put("com.tencent.ig", createOP13Props());
+        put("com.pubg.imobile", createOP13Props());
+        put("com.pubg.krmobile", createOP13Props());
+        put("com.rekoo.pubgm", createOP13Props());
+        put("com.vng.pubgmobile", createOP13Props());
+        put("com.tencent.tmgp.pubgmhd", createOP13Props());
+        put("com.dts.freefiremax", createOP13Props());
+        put("com.dts.freefireth", createOP13Props());
+        put("com.epicgames.fortnite", createOP13Props());
+    }};
 
-## Table of Contents
+    @Override
+    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        String packageName = loadPackageParam.packageName;
 
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Supported Games](#supported-games)
-- [License](#license)
-- [Contributing](#contributing)
+        if (packagesToSpoof.containsKey(packageName)) {
+            Map<String, String> propsToChange = packagesToSpoof.get(packageName);
+            if (propsToChange != null) {
+                spoofProperties(propsToChange);
+                XposedBridge.log("Spoofed " + packageName + " as OnePlus 13");
+            }
+        }
+    }
 
-## Getting Started
+    private static void spoofProperties(Map<String, String> properties) {
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            setPropValue(entry.getKey(), entry.getValue());
+        }
+    }
 
-See the tutorial: [here](https://youtu.be/Ie0vEiQaQek)
+    private static void setPropValue(String key, String value) {
+        try {
+            Log.d(TAG, "Setting property " + key + " to " + value);
+            Field field = Build.class.getDeclaredField(key);
+            field.setAccessible(true);
+            field.set(null, value);
+            field.setAccessible(false);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            String errorMessage = "Failed to set property: " + key + " to " + value;
+            Log.e(TAG, errorMessage, e);
+            XposedBridge.log(errorMessage + "\n" + Log.getStackTraceString(e));
+        }
+    }
 
-### Installation Guide
-
-1. **Check Root Access**
-   Ensure that your Android device is rooted. You can verify this using the [Root Checker](https://play.google.com/store/apps/details?id=com.joeykrim.rootcheck&hl=en). If you don't have root access, follow the instructions [here](https://topjohnwu.github.io/Magisk/).
-
-2. **Install Magisk**
-   Download and install [Magisk Canary](https://github.com/topjohnwu/Magisk/releases/tag/canary-27008) if it's not already installed on your device.
-
-3. **(Optional) Install Shamiko Module**
-   To hide root, consider installing the [Shamiko](https://github.com/LSPosed/LSPosed.github.io/releases) module.
-
-4. **Install LSPosed_mod Module**
-   Through the Magisk app, install the [LSPosed_mod](https://github.com/mywalkb/LSPosed_mod/releases) module.
-
-5. **Open LSPosed_mod Manager**
-   Launch the `LSPosed_mod` Manager.
-
-6. **Enable the Module**
-   - Navigate to the `Modules` section.
-   - Search for `catsmoker` and enable the module.
-
-7. **Manage Supported Games**
-   The supported games will be automatically added to the scope.
-
-8. **Force Stop the Game**
-   Manually force stop the added game to apply the changes.
-
-## Usage
-
-Once you've installed and activated the Catsmoker module, it will automatically spoof your device information for supported gaming applications. There's no additional configuration required. Simply force stop and open the games you want to play, and enjoy the benefits of device spoofing.
-
-You can untick the games you don't want to spoof in the LSPosed app. A reboot may be required.
-
-**Note:** Device spoofing may violate the terms of service for some games or apps.
-
-For any additional games you’d like to see supported, please open an issue with the APK name at [issues](https://github.com/catsmoker/com.app.catsmoker/issues).
-
-## Note
-
-Updates are temporarily on hold due to a lack of devices available for experimentation.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-![app](https://github.com/user-attachments/assets/5f0812d4-5636-434c-8ec0-1dd7fc427015)
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for any bugs, improvements, or new features.
+    /**
+     * Creates a map of properties to spoof a device as a OnePlus 13.
+     * Note: The model name "PJE110" is a placeholder for OnePlus 13's potential model number.
+     * You might need to update this if the official model number for OnePlus 13 is different.
+     */
+    private static Map<String, String> createOP13Props() {
+        Map<String, String> props = new HashMap<>();
+        props.put("MANUFACTURER", "OnePlus");
+        // Placeholder model number for OnePlus 13. Please verify and update if needed.
+        props.put("MODEL", "PJE110");
+        return props;
+    }
+}
